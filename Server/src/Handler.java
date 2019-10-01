@@ -130,20 +130,24 @@ public class Handler implements Runnable {
         //System.out.println("client"+ClientMessage.getFrom()+"message : "+ClientMessage.getContent());
         File file = new File(FILEPREFIX + ClientMessage.getFileName());
         switch (ClientMessage.getType()){
-            case "ENQUIRY":
+            case "enquiry":
                 ServerMessage.setContent(ListAllFile());
                 break;
-            case "READ":
-                System.out.println(ClientMessage.getFrom() + " Reading...");
+            case "read":
+                System.out.println(ClientMessage.getFrom() + ": Reading...");
                 ServerMessage.setContent(ReadLastLine(file));
+                System.out.println("Reading "+ClientMessage.getContent());
                 break;
-            case "WRITE":
-                System.out.println(ClientMessage.getFrom() + "writing...");
+            case "write":
+                System.out.println(ClientMessage.getFrom() + ": writing...");
                 WriteLastLine(file,ClientMessage.getContent());
+                ServerMessage.setContent(ReadLastLine(file));
+                System.out.println("Writing "+ClientMessage.getContent());
                 break;
             default:
                 System.out.println(ClientMessage.getType());
-                System.out.println(ClientMessage.getFrom() + "Wrong type");
+                ServerMessage.setContent("Error");
+                System.out.println(ClientMessage.getFrom() + ": Wrong type");
                 break;
         }
         socketWrite(clientSocket,ServerMessage);

@@ -9,6 +9,7 @@ public class Message implements Comparable<Message>, Serializable {
     private final int to;
     private String content = "";
     private final String fileName;
+
     public String getContent() {
         return content;
     }

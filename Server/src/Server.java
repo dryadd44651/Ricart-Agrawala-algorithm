@@ -3,6 +3,7 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,13 +25,15 @@ public class Server {
 
     private static final String FILEPREFIX = ".//files" + "//";
     private static String fileName = "123.txt";
-
+    private void setID(int src){
+        serverID = src;
+    }
     private  void run(){
         //while (true){
         Socket socket = null;
         try (ServerSocket ss = new ServerSocket(serverPorts[serverID]);){
 
-            System.out.println("Server is runing...");
+            System.out.println("Server"+serverID+" is runing...");
             socket = ss.accept();
             //System.out.println("Client:"+socket.getPort()+"connected");
 
@@ -53,12 +56,38 @@ public class Server {
         }
         //}
     }
-
+    public static void deleteFolder(File folder) {
+        File[] files = folder.listFiles();
+        if(files!=null) { //some JVMs return null for empty dirs
+            for(File f: files) {
+                if(f.isDirectory()) {
+                    deleteFolder(f);
+                } else {
+                    f.delete();
+                }
+            }
+        }
+        folder.delete();
+    }
     public static void main(String[] args) throws IOException {
-        File file = new File(FILEPREFIX + fileName);
+        //File file = new File(FILEPREFIX + fileName);
+
+        //Path path = Paths.get(FILEPREFIX);
+        //if(!Files.exists(path))
+        //DirectoryStream<Path> stream = Files.newDirectoryStream(path, "*.xml");
+        deleteFolder(new File("./files"));//delete folder and content
+        new File("./files").mkdir();//new a folder
+        for (int i = 0;i<8;i++){//create new txt for client
+            new File("./files/"+i+".txt").createNewFile();
+        }
 
 
         Server server = new Server();
+        if(args.length!=0)
+            server.setID(Integer.valueOf(args[0]));
+        else
+            server.setID(0);
+
         while (true){
             server.run();
         }

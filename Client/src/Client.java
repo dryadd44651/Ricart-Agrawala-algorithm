@@ -1,15 +1,8 @@
 
 import java.io.*;
 import java.net.*;
-import java.sql.Date;
 import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.*;
 
 
@@ -19,6 +12,7 @@ public class Client{
     //static String[] clientIps = new String[] { "127.0.0.1","127.0.0.1","127.0.0.1"};
     boolean[] token = new boolean[]{ false,false,false,false,false};
     //static boolean[] token = new boolean[]{ false,false,false};
+    //String[] serverIps = new String[] { "dc01.utdallas.edu", "dc02.utdallas.edu", "dc03.utdallas.edu" };
     String[] serverIps = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
     int[] serverPorts = new int[] { 30500, 30501, 30502 };
     private ArrayList<Handler> clients = new ArrayList<>();
@@ -27,7 +21,7 @@ public class Client{
     private static int clientID = 0;
     private Message socketRead(Socket socket){
         BufferedReader br;
-        Message message = new Message(0,"",0,0,"");;
+        Message message = new Message(0, "",0,0,"");;
         try {
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             message =(Message) ois.readObject();
@@ -64,7 +58,7 @@ public class Client{
     private boolean inCS = false;
     private String fileName = "";
     private Message getReturnMessage(Message src){
-        Message dst = new Message(clock,src.getType(),src.getTo(),src.getFrom(),src.getFileName());
+        Message dst = new Message(clock, src.getType(),src.getTo(),src.getFrom(),src.getFileName());
         return dst;
     }
     //private List<Message> pendingList = new ArrayList<Message>();
@@ -80,7 +74,7 @@ public class Client{
 
         int tempClock = clock+1;
         //int tempClock = clock;
-        System.out.println("broadcast");
+        //System.out.println("broadcast");
         for (int i = 0;i<clientIps.length;i++){
             if(i!=clientID&&token[i]==false){
                 int finalI = i;
@@ -95,18 +89,18 @@ public class Client{
                                 socket = new Socket(clientIps[finalI], clientPorts[finalI]);
                                 Message request = new Message(tempClock, "request", clientID, finalI, fileName);
                                 request.setContent("request");
-                                System.out.println("request" + clientID + " to " + finalI);
+                                //System.out.println("request" + clientID + " to " + finalI);
                                 success = socketWrite(socket, request);
                                 Message ServerMessage = socketRead(socket);
                                 if (ServerMessage.getContent().compareTo("fail") == 0)
                                     success = false;
                                 if (ServerMessage.getContent().compareTo("ok") == 0) {
-                                    System.out.println("request sent to (ok) :" + request.getTo());
+                                    //System.out.println("request sent to (ok) :" + request.getTo());
                                     token[finalI] = true;
                                     //printToken();
                                 }
                                 else {
-                                    System.out.println("request sent to(wait) :" + request.getTo() );
+                                    //System.out.println("request sent to(wait) :" + request.getTo() );
                                     token[finalI] = false;
                                     //printToken();
                                 }
@@ -135,7 +129,7 @@ public class Client{
     private void broadcastRelease() throws IOException, InterruptedException {
         waiting = true;
         int tempClock = clock+1;
-        System.out.println("broadcast releas");
+        //System.out.println("broadcast releas");
         for (int i = 0;i<clientIps.length;i++){
             if(i!=clientID){//&& token[i]==true
                 int finalI = i;
@@ -149,7 +143,7 @@ public class Client{
                                 socket = new Socket(clientIps[finalI], clientPorts[finalI]);
                                 Message release = new Message(tempClock, "release", clientID, finalI, fileName);
                                 release.setContent("release");
-                                System.out.println("release" + clientID + " to " + finalI);
+                                //System.out.println("release" + clientID + " to " + finalI);
 
                                 success = socketWrite(socket, release);
 
@@ -158,11 +152,11 @@ public class Client{
                                     token[finalI] = false;
                                     //printToken();
                                 } else {
-                                    System.out.println("Release error " + ServerMessage.getContent());
+                                    //System.out.println("Release error " + ServerMessage.getContent());
                                     success = false;
 
                                 }
-                                System.out.println("request sent to " + release.getTo() + success);
+                                //System.out.println("request sent to " + release.getTo() + success);
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             } catch (UnknownHostException e) {
@@ -238,41 +232,44 @@ public class Client{
             if(checkToken())
                 break;
             for (boolean t:token)
-                System.out.print(" "+t);
-            System.out.println(" Waiting..."+token.length) ;
+               //System.out.print(" "+t);
+            //System.out.println(" Waiting..."+token.length) ;
 
             Thread.sleep(200);
         }
 
         inCS = true;
-        System.out.println("In CS");
+        //System.out.println("In CS");
     }
     private  void CSleave() throws IOException, InterruptedException {
         inCS = false;
         waiting = false;
         for (boolean t:token)
             t = false;
-        System.out.println("Out CS and Release");
+        //System.out.println("Out CS and Release");
         broadcastRelease();
     }
-    private  void run(int serverID,int action) throws IOException, InterruptedException {
+    private  void run(int serverID,String action) throws IOException, InterruptedException {
         try {
             Timestamp timestamp = new Timestamp(System.currentTimeMillis());
             Socket socket = new Socket(serverIps[serverID],serverPorts[serverID]);
 
             Message message;
             clock++;
-            System.out.println("clock: "+ clock);
+            //System.out.println("clock: "+ clock);
             switch (action){
-                case 0:
-                    message = new Message(clock,"ENQUIRY",clientID,serverID,fileName);
+                case "enquiry":
+                    message = new Message(clock, action,clientID,serverID,fileName);
                     break;
-                case 1:
-                    message = new Message(clock,"READ",clientID,serverID,fileName);
+                case "read":
+                    message = new Message(clock, action,clientID,serverID,fileName);
+                    break;
+                case "write":
+                    message = new Message(clock, action,clientID,serverID,fileName);
                     break;
                 default:
-                    message = new Message(clock,"WRITE",clientID,serverID,fileName);
-                    break;
+                    System.out.println("Error");
+                    return;
             }
             message.setContent(clientID+": "+getTimeStamp());
             //broadcast request
@@ -282,8 +279,8 @@ public class Client{
 
             socketWrite(socket,message);
             //read message from server
-            //Message ServerMessage =socketRead(socket);
-            //System.out.println("server: "+ServerMessage.getContent());
+            Message ServerMessage =socketRead(socket);
+            System.out.println("server: \n"+ServerMessage.getContent());
 
 
 
@@ -302,17 +299,68 @@ public class Client{
         new Thread() {
             public void run() {
                 try {
-                    for (int i = 0;i<50;i++){
-                    //while (true){
+                    String userCommand = "";
+                    Scanner scanner = new Scanner(System.in).useDelimiter(";");
+                    boolean isExit = true;
+                    int times = 0;
+                    String prompt = "Client: "+clientID;
+                    System.out.println("Command: exit, enquiry, read, write command must end with ; ");
+                    System.out.println("USAGE: [command] [filename];");
+                    //for (int i = 0;i<50;i++){
+                    while (isExit){
+                        System.out.println(prompt);
+                        if(times==0)
+                            userCommand = scanner.next().replace("\n", " ").replace("\r", "").trim().toLowerCase();
+                        ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(userCommand.split(" ")));
                         Random rand = new Random();
+
+                        if(commandTokens.size() == 3 && times ==0)
+                            times = Integer.valueOf(commandTokens.get(2))%50;
+
+                        switch (commandTokens.get(0)) {
+                            case "exit":
+                                isExit = false;
+                                times = 0;
+                                continue;
+                            case "enquiry":
+                                //client.run(rand.nextInt(2),commandTokens.get(0));
+                                client.run(0,commandTokens.get(0));
+                                times = 0;
+                                continue;
+                            case "read":
+                            case "write":
+                                if (commandTokens.size() == 1)
+                                    client.fileName = "0.txt";
+                                else
+                                    client.fileName = commandTokens.get(1);
+                                if(times>0){
+                                    times--;
+                                }
+                                break;
+                            default:
+                                System.out.println("Command: exit, enquiry, read, write command must end with ; ");
+                                System.out.println("USAGE: [command] [filename] [times];");
+                                times = 0;
+                                continue;
+                        }
                         Thread.sleep(1000);
-                        //Thread.sleep(rand.nextInt(5000));
-                        client.fileName = "123.txt";
+
+
 
                         CScheck();
-                        client.run(0,2);//2 for write (test)
+                        if(commandTokens.get(0)=="write"){
+                            client.run(0,commandTokens.get(0));
+                            //client.run(1,commandTokens.get(0));
+                            //client.run(2,commandTokens.get(0));
+                        }
+                        else{
+                            //client.run(rand.nextInt(2),commandTokens.get(0));
+                            client.run(0,commandTokens.get(0));
+                        }
                         CSleave();
+
                     }
+                    System.out.println("Exiting...");
                 } catch (InterruptedException | IOException e) {
                     e.printStackTrace();
                 }
@@ -330,7 +378,7 @@ public class Client{
             reply = getReturnMessage(neighborRequest);
             switch (neighborRequest.getContent()){
                 case "request":
-                    System.out.println(" get request: "+neighborRequest.getClock());
+                    //System.out.println(" get request: "+neighborRequest.getClock());
                     //reply.setContent("reply");
                     //System.out.println(waiting+" "+neighborRequest.getClock()+" > "+clock);
                     if(inCS || waiting && neighborRequest.getFrom()>clientID){
@@ -340,19 +388,19 @@ public class Client{
                         //System.out.println("defer listsize: "+pendingList.size());
                         break;
                     }else {
-                        System.out.println("inCS "+inCS+ " waiting "+waiting+" nID "+neighborRequest.getFrom());
+                        //System.out.println("inCS "+inCS+ " waiting "+waiting+" nID "+neighborRequest.getFrom());
                         token[neighborRequest.getFrom()] = false;
                         reply.setContent("ok");
                     }
                     break;
                 case "release":
                     reply.setContent("ok");
-                    System.out.println("release from "+neighborRequest.getFrom());
+                    //System.out.println("release from "+neighborRequest.getFrom());
                     token[neighborRequest.getFrom()] = true;
                     //socketWrite(socket, reply);
                     break;
                 default:
-                    System.out.println("error");
+                    //System.out.println("error");
                     reply.setContent("error"+neighborRequest.getContent());
                     //socketWrite(socket,reply);
                     break;
@@ -371,7 +419,7 @@ public class Client{
         clientID = Integer.valueOf(id);
         clientID = clientID%clientIps.length;
         clock =clientID;
-        System.out.println("clientID: "+clientID);
+        //System.out.println("clientID: "+clientID);
         token[clientID] = true;
     }
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -383,6 +431,8 @@ public class Client{
             client.ini("0");
         client.listening();
         client.CallServerThread(client);
+
+
 
     }
 
