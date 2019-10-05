@@ -20,10 +20,10 @@ public class Handler implements Runnable {
     //private static final int ID = 1;
     private ArrayList<Handler> clients = new ArrayList<>();
     private ExecutorService pool = Executors.newFixedThreadPool(10);
+	private String FILEPREFIX;
 
-
-    private static final String FILEPREFIX = ".//files" + "//";
-    private static String fileName = "123.txt";
+    
+    
     private Message ClientMessage;
     private Message ServerMessage;
 
@@ -50,7 +50,7 @@ public class Handler implements Runnable {
             e.printStackTrace();
         }
     }
-    public static String ReadLastLine(File file) {
+    public String ReadLastLine(File file) {
         RandomAccessFile fileHandler = null;
         try {
             fileHandler = new RandomAccessFile( file, "r" );
@@ -85,7 +85,7 @@ public class Handler implements Runnable {
                 }
         }
     }
-    public static void WriteLastLine(File file, String input) throws IOException {
+    public void WriteLastLine(File file, String input) throws IOException {
         if(!file.exists()){
             file.createNewFile();
             System.out.println("New File Created Now");
@@ -100,7 +100,7 @@ public class Handler implements Runnable {
         writer.close();
 
     }
-    public static String ListAllFile(){
+    public String ListAllFile(){
         String dst = "";
         try (Stream<Path> walk = Files.walk(Paths.get(FILEPREFIX))) {
 
@@ -122,9 +122,10 @@ public class Handler implements Runnable {
         Message dst = new Message(1,src.getType(),src.getTo(),src.getFrom(),src.getFileName());
         return dst;
     }
-    public Handler(Socket clientSocket) throws IOException {
+    public Handler(Socket clientSocket,int serverID) throws IOException {
         this.client = clientSocket;
-
+		
+		FILEPREFIX = ".//files"+serverID + "//";
         ClientMessage = (Message) socketRead(client);
         ServerMessage = getReturnMessage(ClientMessage);
         //System.out.println("client"+ClientMessage.getFrom()+"message : "+ClientMessage.getContent());
@@ -135,13 +136,13 @@ public class Handler implements Runnable {
                 break;
             case "read":
                 System.out.println(ClientMessage.getFrom() + ": Reading...");
-                ServerMessage.setContent(ReadLastLine(file));
+                ServerMessage.setContent("Reading: "+ReadLastLine(file));
                 System.out.println("Reading "+ClientMessage.getContent());
                 break;
             case "write":
                 System.out.println(ClientMessage.getFrom() + ": writing...");
                 WriteLastLine(file,ClientMessage.getContent());
-                ServerMessage.setContent(ReadLastLine(file));
+                ServerMessage.setContent("writing: "+ReadLastLine(file));
                 System.out.println("Writing "+ClientMessage.getContent());
                 break;
             default:

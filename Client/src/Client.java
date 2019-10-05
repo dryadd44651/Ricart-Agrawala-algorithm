@@ -5,20 +5,25 @@ import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.*;
 
-
+//Tab/ Shift+Tab
 public class Client{
     int[] clientPorts = new int[] { 30000, 30001, 30002, 30003, 30004 };
+    //String[] clientIps = new String[] { "dc04.utdallas.edu", "dc05.utdallas.edu", "dc06.utdallas.edu","dc07.utdallas.edu", "dc08.utdallas.edu" };
     String[] clientIps = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1" };
     //static String[] clientIps = new String[] { "127.0.0.1","127.0.0.1","127.0.0.1"};
-    boolean[] token = new boolean[]{ false,false,false,false,false};
+    //boolean[] token = new boolean[]{ false,false,false,false,false};
+    Map<String,List<Boolean>> token = new HashMap<String,List<Boolean>>();
+    int releaseCounter = 0;
     //static boolean[] token = new boolean[]{ false,false,false};
     //String[] serverIps = new String[] { "dc01.utdallas.edu", "dc02.utdallas.edu", "dc03.utdallas.edu" };
     String[] serverIps = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
     int[] serverPorts = new int[] { 30500, 30501, 30502 };
-    private ArrayList<Handler> clients = new ArrayList<>();
-    private ExecutorService pool = Executors.newFixedThreadPool(10);
+    ArrayList<Integer> request = new ArrayList<Integer>();
 
-    private static int clientID = 0;
+    private ArrayList<Handler> clients = new ArrayList<>();
+    private ExecutorService pool = Executors.newFixedThreadPool(100);
+
+    private int clientID = 0;
     private Message socketRead(Socket socket){
         BufferedReader br;
         Message message = new Message(0, "",0,0,"");;
@@ -27,12 +32,12 @@ public class Client{
             message =(Message) ois.readObject();
 
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            System.out.println("socketRead error");
             message.setContent("fail");
         }
         return  message;
     }
-    private boolean socketWrite(Socket socket, Message message) throws InterruptedException {
+    private boolean socketWrite(Socket socket, Message message){
 
         try {
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
@@ -42,7 +47,8 @@ public class Client{
             oos.flush();
             return true;
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            System.out.println("socketWrite error");
             return false;
         }
     }
@@ -56,19 +62,14 @@ public class Client{
     private static int clock = 0;
     private boolean waiting = false;
     private boolean inCS = false;
-    private String fileName = "";
+    private String fileName = "0.txt";
     private Message getReturnMessage(Message src){
         Message dst = new Message(clock, src.getType(),src.getTo(),src.getFrom(),src.getFileName());
         return dst;
     }
-    //private List<Message> pendingList = new ArrayList<Message>();
-    private void printToken(){
-        for (boolean t:token) {
-                System.out.print(t);
-            }
-        System.out.println();
-    }
-    private void broadcastRepuest() throws IOException, InterruptedException {
+
+
+    private void broadcastRepuest(){
         waiting = true;
         //while (fifo_flag);
 
@@ -76,7 +77,7 @@ public class Client{
         //int tempClock = clock;
         //System.out.println("broadcast");
         for (int i = 0;i<clientIps.length;i++){
-            if(i!=clientID&&token[i]==false){
+            if(i!=clientID&& !token.get(fileName).get(i)){
                 int finalI = i;
                 new Thread() {
                     public void run() {
@@ -92,25 +93,26 @@ public class Client{
                                 //System.out.println("request" + clientID + " to " + finalI);
                                 success = socketWrite(socket, request);
                                 Message ServerMessage = socketRead(socket);
-                                if (ServerMessage.getContent().compareTo("fail") == 0)
-                                    success = false;
-                                if (ServerMessage.getContent().compareTo("ok") == 0) {
+                                if (ServerMessage.getContent().compareTo("wait") == 0){
+                                    token.get(fileName).set(finalI,false);
+                                    //System.out.println(finalI+"say wait!! :");
+
+                                }
+                                else if (ServerMessage.getContent().compareTo("ok") == 0) {
                                     //System.out.println("request sent to (ok) :" + request.getTo());
-                                    token[finalI] = true;
+                                    token.get(fileName).set(finalI,true);
+                                    //System.out.println(finalI+"say ok!! :");
                                     //printToken();
                                 }
                                 else {
-                                    //System.out.println("request sent to(wait) :" + request.getTo() );
-                                    token[finalI] = false;
+                                    System.out.println(finalI+"connect error:!!!!!!!!!!!!!!!!!");
+                                    success = false;
+                                    Thread.sleep(200);
                                     //printToken();
                                 }
 
                                 //System.out.println("request sent to" + request.getTo() + success);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            } catch (UnknownHostException e) {
-                                e.printStackTrace();
-                            } catch (IOException e) {
+                            } catch (InterruptedException |IOException e) {
                                 e.printStackTrace();
                             }finally{
                                 try {
@@ -126,15 +128,19 @@ public class Client{
         }
         //fifo_flag = false;
     }
-    private void broadcastRelease() throws IOException, InterruptedException {
-        waiting = true;
+    private void broadcastRelease() throws InterruptedException {
+        waiting = false;
         int tempClock = clock+1;
-        //System.out.println("broadcast releas");
+
+        //System.out.println("broadcast release");
         for (int i = 0;i<clientIps.length;i++){
+        //for (int i:request) {
+
             if(i!=clientID){//&& token[i]==true
                 int finalI = i;
                 new Thread() {
                     public void run() {
+
                         boolean success = false;
                         while (!success) {
                             Socket socket = null;
@@ -149,18 +155,15 @@ public class Client{
 
                                 Message ServerMessage = socketRead(socket);
                                 if (ServerMessage.getContent().compareTo("ok") == 0) {
-                                    token[finalI] = false;
-                                    //printToken();
+                                    token.get(fileName).set(finalI,false);
+                                    //System.out.println("release to "+finalI);
+                                    releaseCounter++;
                                 } else {
                                     //System.out.println("Release error " + ServerMessage.getContent());
                                     success = false;
 
                                 }
                                 //System.out.println("request sent to " + release.getTo() + success);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            } catch (UnknownHostException e) {
-                                e.printStackTrace();
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }finally{
@@ -176,7 +179,14 @@ public class Client{
 
                 }.start();
             }
+
         }
+        while (releaseCounter<clientIps.length-1) {
+            Thread.sleep(30);
+            //System.out.println("wait all released: "+releaseCounter);
+        }
+        releaseCounter = 0;
+        request.clear();
     }
     private void clockUpdate(Message message){
         if(message.getClock()>clock){
@@ -187,7 +197,7 @@ public class Client{
         }
     }
     private boolean checkToken() {
-        for (boolean t:token) {
+        for (boolean t:token.get(fileName)) {
             if(t==false) {//find one false, return false
                 //System.out.print("checkToken: ");
                 //System.out.print(t);
@@ -196,7 +206,7 @@ public class Client{
         }
         return true;
     }
-    private void listening() throws IOException, InterruptedException {
+    private void listening(){
         //receive request and reply
         System.out.println("Listening...");
 
@@ -215,9 +225,7 @@ public class Client{
                         Handler clientThread = new Handler(socket);
                         clients.add(clientThread);
                         pool.execute((clientThread));
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
+                    } catch (InterruptedException |IOException e) {
                         e.printStackTrace();
                     }
                 }
@@ -231,11 +239,12 @@ public class Client{
         while (true){
             if(checkToken())
                 break;
-            for (boolean t:token)
-               //System.out.print(" "+t);
+            for (boolean t:token.get(fileName)) {
+                //System.out.print(" "+t);
+            }
             //System.out.println(" Waiting..."+token.length) ;
 
-            Thread.sleep(200);
+            Thread.sleep(10);
         }
 
         inCS = true;
@@ -244,56 +253,52 @@ public class Client{
     private  void CSleave() throws IOException, InterruptedException {
         inCS = false;
         waiting = false;
-        for (boolean t:token)
-            t = false;
-        //System.out.println("Out CS and Release");
+        ArrayList<Integer> tmp = (ArrayList<Integer>)request.clone();
         broadcastRelease();
     }
-    private  void run(int serverID,String action) throws IOException, InterruptedException {
-        try {
-            Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-            Socket socket = new Socket(serverIps[serverID],serverPorts[serverID]);
+    private  String run(int serverID,String action) throws IOException, InterruptedException {
+        Message ServerMessage = new Message(0,"",0,0,"");
 
-            Message message;
-            clock++;
-            //System.out.println("clock: "+ clock);
-            switch (action){
-                case "enquiry":
-                    message = new Message(clock, action,clientID,serverID,fileName);
-                    break;
-                case "read":
-                    message = new Message(clock, action,clientID,serverID,fileName);
-                    break;
-                case "write":
-                    message = new Message(clock, action,clientID,serverID,fileName);
-                    break;
-                default:
-                    System.out.println("Error");
-                    return;
-            }
-            message.setContent(clientID+": "+getTimeStamp());
-            //broadcast request
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        Socket socket = new Socket(serverIps[serverID],serverPorts[serverID]);
 
-            //sent to server
-
-
-            socketWrite(socket,message);
-            //read message from server
-            Message ServerMessage =socketRead(socket);
-            System.out.println("server: \n"+ServerMessage.getContent());
-
-
-
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (SocketTimeoutException e) {
-            System.out.println("time out");
-            CSleave();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        Message message;
+        clock++;
+        //System.out.println("clock: "+ clock);
+        switch (action){
+            case "enquiry":
+                message = new Message(clock, action,clientID,serverID,fileName);
+                break;
+            case "read":
+                message = new Message(clock, action,clientID,serverID,fileName);
+                break;
+            case "write":
+                message = new Message(clock, action,clientID,serverID,fileName);
+                break;
+            default:
+                System.out.println("Error");
+                return "Error";
         }
+        message.setContent(clientID+": "+getTimeStamp());
+        //broadcast request
+
+        //sent to server
+
+        if(!socketWrite(socket,message))
+            return "fail";
+
+
+
+
+
+        //read message from server
+        ServerMessage =socketRead(socket);
+        if(ServerMessage.getContent().compareTo("fail")==0)
+            return "fail";
+        System.out.println("server: \n"+ServerMessage.getContent());
+
+
+        return ServerMessage.getContent();
     }
     private void CallServerThread(Client client){
         new Thread() {
@@ -304,8 +309,9 @@ public class Client{
                     boolean isExit = true;
                     int times = 0;
                     String prompt = "Client: "+clientID;
+                    String command = "";
                     System.out.println("Command: exit, enquiry, read, write command must end with ; ");
-                    System.out.println("USAGE: [command] [filename];");
+                    System.out.println("USAGE: [command] [filename] [times];");
                     //for (int i = 0;i<50;i++){
                     while (isExit){
                         System.out.println(prompt);
@@ -313,9 +319,12 @@ public class Client{
                             userCommand = scanner.next().replace("\n", " ").replace("\r", "").trim().toLowerCase();
                         ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(userCommand.split(" ")));
                         Random rand = new Random();
-
+                        command = commandTokens.get(0);
                         if(commandTokens.size() == 3 && times ==0)
-                            times = Integer.valueOf(commandTokens.get(2))%50;
+                            times = Integer.valueOf(commandTokens.get(2))%51;
+                        if(command.compareTo("test") == 0 && times ==0)
+                            times = 20;
+
 
                         switch (commandTokens.get(0)) {
                             case "exit":
@@ -323,39 +332,55 @@ public class Client{
                                 times = 0;
                                 continue;
                             case "enquiry":
-                                //client.run(rand.nextInt(2),commandTokens.get(0));
-                                client.run(0,commandTokens.get(0));
+                                client.run(rand.nextInt(2),commandTokens.get(0));
+                                //client.run(0,commandTokens.get(0));
                                 times = 0;
                                 continue;
                             case "read":
+                                command = "read";
+                                break;
                             case "write":
-                                if (commandTokens.size() == 1)
-                                    client.fileName = "0.txt";
+                                command = "write";
+                                break;
+                            case "test":
+                                if(rand.nextInt(2)==0)
+                                    command = "write";
                                 else
-                                    client.fileName = commandTokens.get(1);
-                                if(times>0){
-                                    times--;
-                                }
+                                    command = "read";
                                 break;
                             default:
-                                System.out.println("Command: exit, enquiry, read, write command must end with ; ");
+                                System.out.println("Command: exit, enquiry, read, write, test command must end with ; ");
                                 System.out.println("USAGE: [command] [filename] [times];");
                                 times = 0;
                                 continue;
                         }
-                        Thread.sleep(1000);
+
+
+                        if(commandTokens.size()>=2)
+                            client.fileName = commandTokens.get(1);
+                        else{
+                            System.out.println("Please enter the file name");
+                            times = 0;
+                            continue;
+                        }
+                        if(times>0) {
+                            Thread.sleep(rand.nextInt(2) * 1000);
+                            times--;
+                            System.out.println(times);
+                        }
 
 
 
                         CScheck();
-                        if(commandTokens.get(0)=="write"){
-                            client.run(0,commandTokens.get(0));
-                            //client.run(1,commandTokens.get(0));
-                            //client.run(2,commandTokens.get(0));
+                        clock++;
+                        if(command.compareTo("write")==0 ){
+                            client.run(0,command);
+                            //client.run(1,command);
+                            //client.run(2,command);
                         }
                         else{
-                            //client.run(rand.nextInt(2),commandTokens.get(0));
-                            client.run(0,commandTokens.get(0));
+                            client.run(rand.nextInt(2),command);
+                            //client.run(0,commandTokens.get(0));
                         }
                         CSleave();
 
@@ -376,27 +401,43 @@ public class Client{
             this.socket = src;
             neighborRequest = (Message) socketRead(socket);
             reply = getReturnMessage(neighborRequest);
+            //System.out.println(neighborRequest.getContent());
             switch (neighborRequest.getContent()){
                 case "request":
                     //System.out.println(" get request: "+neighborRequest.getClock());
                     //reply.setContent("reply");
                     //System.out.println(waiting+" "+neighborRequest.getClock()+" > "+clock);
-                    if(inCS || waiting && neighborRequest.getFrom()>clientID){
-                        reply.setContent("wait");
-                        socketWrite(socket, reply);
-                        //pendingList.add(reply);
-                        //System.out.println("defer listsize: "+pendingList.size());
+
+                    //if different file
+                    if(neighborRequest.getFileName().compareTo(fileName) !=0){
+                        reply.setContent("ok");
+                        token.get(neighborRequest.getFileName()).set(neighborRequest.getFrom(),false);
+                        //System.out.println("diff file ok");
                         break;
-                    }else {
-                        //System.out.println("inCS "+inCS+ " waiting "+waiting+" nID "+neighborRequest.getFrom());
-                        token[neighborRequest.getFrom()] = false;
+                    }
+                    //if(inCS || waiting && neighborRequest.getFrom()>clientID){
+                    if(inCS | (waiting && (neighborRequest.getClock()>=clock))){
+                        //System.out.println("******************wait: "+neighborRequest.getClock()+">"+clock);
+                        //Thread.sleep(1000);
+                        reply.setContent("wait "+neighborRequest.getFrom());
+                        request.add(neighborRequest.getFrom());
+                        //System.out.println("defer: ");
+                    }else{
+                        token.get(fileName).set(neighborRequest.getFrom(),false);
+                        //System.out.println("******************ok:  "+neighborRequest.getFrom());
+                        //System.out.println("******************: "+neighborRequest.getClock()+">"+clock);
                         reply.setContent("ok");
                     }
+
                     break;
                 case "release":
                     reply.setContent("ok");
                     //System.out.println("release from "+neighborRequest.getFrom());
-                    token[neighborRequest.getFrom()] = true;
+                    token.get(fileName).set(neighborRequest.getFrom(),true);
+//                    for (boolean t:token.get(fileName)) {
+//                        System.out.print(" "+t);
+//                    }
+                    //System.out.println(" Release from..."+neighborRequest.getFrom()) ;
                     //socketWrite(socket, reply);
                     break;
                 default:
@@ -419,8 +460,6 @@ public class Client{
         clientID = Integer.valueOf(id);
         clientID = clientID%clientIps.length;
         clock =clientID;
-        //System.out.println("clientID: "+clientID);
-        token[clientID] = true;
     }
     public static void main(String[] args) throws InterruptedException, IOException {
 
@@ -430,10 +469,32 @@ public class Client{
         else
             client.ini("0");
         client.listening();
+        Thread.sleep(client.clientID*100);
         client.CallServerThread(client);
 
 
+        String str;
+        while (true) {
+            //try {
+            str = client.run(0, "enquiry");
+            if(str.compareTo("fail")!=0)
+                break;
+            //} catch (IOException | InterruptedException e) {
+             //System.out.println("Wait to connote");
+            //}
 
+        }
+        ArrayList<String> strToken = new ArrayList<String>(Arrays.asList(str.split("\n")));
+        List<Boolean> tmp = new ArrayList<>();
+        for(int i = 0;i<client.clientIps.length;i++){
+            if(i==client.clientID)
+                tmp.add(true);
+            else
+                tmp.add(false);
+        }
+
+        for(int i = 0;i<strToken.size();i++){
+            client.token.put(strToken.get(i),tmp);
+        }
     }
-
 }

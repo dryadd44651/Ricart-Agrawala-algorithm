@@ -20,24 +20,33 @@ public class Server {
     int[] serverPorts = new int[] { 30500, 30501, 30502 };
     //private static final int ID = 1;
     private ArrayList<Handler> clients = new ArrayList<>();
-    private ExecutorService pool = Executors.newFixedThreadPool(10);
+    private ExecutorService pool = Executors.newFixedThreadPool(500);
+	private String pathName;
 
-
-    private static final String FILEPREFIX = ".//files" + "//";
-    private static String fileName = "123.txt";
+    //private static final String FILEPREFIX = ".//files" + "//";
+    
     private void setID(int src){
         serverID = src;
     }
+	private int getID(){
+        return	serverID;
+    }
+	private void setPathName(){
+        pathName = "./files"+serverID;
+    }
+	private String getPathName(){
+        return	pathName;
+    }
     private  void run(){
         //while (true){
+		System.out.println("Server"+serverID+" is runing...");
         Socket socket = null;
         try (ServerSocket ss = new ServerSocket(serverPorts[serverID]);){
 
-            System.out.println("Server"+serverID+" is runing...");
             socket = ss.accept();
             //System.out.println("Client:"+socket.getPort()+"connected");
 
-            Handler clientThread = new Handler(socket);
+            Handler clientThread = new Handler(socket,serverID);
             clients.add(clientThread);
             pool.execute((clientThread));
 
@@ -75,11 +84,8 @@ public class Server {
         //Path path = Paths.get(FILEPREFIX);
         //if(!Files.exists(path))
         //DirectoryStream<Path> stream = Files.newDirectoryStream(path, "*.xml");
-        deleteFolder(new File("./files"));//delete folder and content
-        new File("./files").mkdir();//new a folder
-        for (int i = 0;i<8;i++){//create new txt for client
-            new File("./files/"+i+".txt").createNewFile();
-        }
+
+        
 
 
         Server server = new Server();
@@ -87,7 +93,13 @@ public class Server {
             server.setID(Integer.valueOf(args[0]));
         else
             server.setID(0);
-
+		
+		server.setPathName();
+		deleteFolder(new File(server.getPathName()));//delete folder and content
+        new File(server.getPathName()).mkdir();//new a folder
+        for (int i = 0;i<8;i++){//create new txt for client
+            new File(server.getPathName()+"/"+i+".txt").createNewFile();
+		}
         while (true){
             server.run();
         }

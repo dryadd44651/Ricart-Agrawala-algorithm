@@ -2,7 +2,7 @@ set fileName=Server
 
 javac -g %fileName%.java
 
-jar cfm Server.jar MANIFEST.MF *.class
+jar cfm Server.jar ServerMANIFEST.MF *.class
 
 pause
 
