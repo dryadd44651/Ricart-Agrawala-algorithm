@@ -15,3 +15,10 @@ write 1.txt 6;
 
 
 
+
+
+
+muti-thread: using same variable can cause problem
+should use syn[thread #]
+
+
