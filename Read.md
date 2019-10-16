@@ -1,6 +1,18 @@
-Put Server.jar in dc01~dc03, Client.jar in dc04~08.
-java -jar Server.jar 0 =>this mean run server 0
-java -jar Client.jar 0 =>this mean run Client 1
+compile the Server.java and Client.java
+
+//for Client.jar
+javac -g Client.java
+jar cfm Client.jar ClientMANIFEST.MF *.class
+//for Server.jar
+javac -g Server.java
+jar cfm Server.jar ClientMANIFEST.MF *.class
+
+Log in dc01~dc03(for Server.jar), dc04~08(for Client.jar).
+java -jar Server.jar 0 =>this mean run server 0 (dc01)
+java -jar Server.jar 1 =>this mean run server 1 (dc02)
+java -jar Server.jar 2 =>this mean run server 1 (dc03)
+java -jar Client.jar 0 =>this mean run Client 0 (dc04)
+...
 
 
 
@@ -12,13 +24,12 @@ enquiry;
 read 0.txt;
 read 0.txt 5;
 write 1.txt 6;
+test 2.txt; (randomly test read/write 20 times)
 
 
 
 
 
 
-muti-thread: using same variable can cause problem
-should use syn[thread #]
 
 
