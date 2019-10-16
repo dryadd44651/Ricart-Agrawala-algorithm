@@ -3,28 +3,18 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Server {
     int serverID = 0;
     int[] serverPorts = new int[] { 30500, 30501, 30502 };
-    //private static final int ID = 1;
     private ArrayList<Handler> clients = new ArrayList<>();
     private ExecutorService pool = Executors.newFixedThreadPool(500);
 	private String pathName;
 
-    //private static final String FILEPREFIX = ".//files" + "//";
-    
+
     private void setID(int src){
         serverID = src;
     }
@@ -37,15 +27,12 @@ public class Server {
 	private String getPathName(){
         return	pathName;
     }
-    private  void run(){
-        //while (true){
+    private  void run() throws IOException {
 		System.out.println("Server"+serverID+" is runing...");
         Socket socket = null;
         try (ServerSocket ss = new ServerSocket(serverPorts[serverID]);){
 
             socket = ss.accept();
-            //System.out.println("Client:"+socket.getPort()+"connected");
-
             Handler clientThread = new Handler(socket,serverID);
             clients.add(clientThread);
             pool.execute((clientThread));
@@ -57,13 +44,8 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }finally{
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            //socket close in handler
         }
-        //}
     }
     public static void deleteFolder(File folder) {
         File[] files = folder.listFiles();
@@ -79,14 +61,6 @@ public class Server {
         folder.delete();
     }
     public static void main(String[] args) throws IOException {
-        //File file = new File(FILEPREFIX + fileName);
-
-        //Path path = Paths.get(FILEPREFIX);
-        //if(!Files.exists(path))
-        //DirectoryStream<Path> stream = Files.newDirectoryStream(path, "*.xml");
-
-        
-
 
         Server server = new Server();
         if(args.length!=0)
@@ -94,7 +68,8 @@ public class Server {
         else
             server.setID(0);
 		
-		server.setPathName();
+		//Remove all file and create the folder and file (make sure file is empty)
+        server.setPathName();
 		deleteFolder(new File(server.getPathName()));//delete folder and content
         new File(server.getPathName()).mkdir();//new a folder
         for (int i = 0;i<8;i++){//create new txt for client

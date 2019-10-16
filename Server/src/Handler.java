@@ -3,35 +3,24 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Handler implements Runnable {
 
     private Socket client;
-    //private BufferedReader in;
-    //private PrintWriter out;
     int serverID = 0;
-    int[] serverPorts = new int[] { 30500, 30501, 30502 };
-    //private static final int ID = 1;
-    private ArrayList<Handler> clients = new ArrayList<>();
-    private ExecutorService pool = Executors.newFixedThreadPool(10);
+    //int[] serverPorts = new int[] { 30500, 30501, 30502 };
 	private String FILEPREFIX;
-
-    
-    
     private Message ClientMessage;
     private Message ServerMessage;
-
-    private Message socketRead(Socket socket){
-        BufferedReader br;
+    ObjectInputStream ois;
+    ObjectOutputStream oos;
+    private Message socketRead(){
+        //ObjectInputStream ois
         Message message = new Message(0,"",0,0,"");;
         try {
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             message =(Message) ois.readObject();
 
         } catch (IOException | ClassNotFoundException e) {
@@ -39,11 +28,9 @@ public class Handler implements Runnable {
         }
         return  message;
     }
-    private void socketWrite(Socket socket,Message message){
-        BufferedWriter bw;
-
+    private void socketWrite(Message message){
+        //ObjectOutputStream oos
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(message);
             oos.flush();
         } catch (IOException e) {
@@ -122,41 +109,54 @@ public class Handler implements Runnable {
         Message dst = new Message(1,src.getType(),src.getTo(),src.getFrom(),src.getFileName());
         return dst;
     }
-    public Handler(Socket clientSocket,int serverID) throws IOException {
+    public Handler(Socket clientSocket,int ID) throws IOException {
         this.client = clientSocket;
-		
-		FILEPREFIX = ".//files"+serverID + "//";
-        ClientMessage = (Message) socketRead(client);
+        this.serverID = ID;
+        this.ois = new ObjectInputStream(clientSocket.getInputStream());
+        this.oos= new ObjectOutputStream(clientSocket.getOutputStream());
+
+
+    }
+    @Override
+    public void run() {
+        //read message from client and analyse it
+        FILEPREFIX = ".//files"+serverID + "//";
+        ClientMessage = (Message) socketRead();
         ServerMessage = getReturnMessage(ClientMessage);
         //System.out.println("client"+ClientMessage.getFrom()+"message : "+ClientMessage.getContent());
         File file = new File(FILEPREFIX + ClientMessage.getFileName());
         switch (ClientMessage.getType()){
-            case "enquiry":
+            case "enquiry"://return the list of file
                 ServerMessage.setContent(ListAllFile());
                 break;
-            case "read":
+            case "read"://read the last line
                 System.out.println(ClientMessage.getFrom() + ": Reading...");
                 ServerMessage.setContent("Reading: "+ReadLastLine(file));
                 System.out.println("Reading "+ClientMessage.getContent());
                 break;
-            case "write":
+            case "write"://write to the end of file
                 System.out.println(ClientMessage.getFrom() + ": writing...");
-                WriteLastLine(file,ClientMessage.getContent());
+                try{
+                    WriteLastLine(file,ClientMessage.getContent());
+                }catch (IOException e) {
+                    System.out.println("write error");
+                }
+
                 ServerMessage.setContent("writing: "+ReadLastLine(file));
                 System.out.println("Writing "+ClientMessage.getContent());
                 break;
-            default:
+            default://unknown command
                 System.out.println(ClientMessage.getType());
                 ServerMessage.setContent("Error");
                 System.out.println(ClientMessage.getFrom() + ": Wrong type");
                 break;
         }
-        socketWrite(clientSocket,ServerMessage);
-    }
-    @Override
-    public void run() {
+        socketWrite(ServerMessage);
 
-
-
+        try {//close the socket connection
+            client.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
