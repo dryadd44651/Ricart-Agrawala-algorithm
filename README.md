@@ -1,6 +1,10 @@
 <h1>Distributed System based on Ricart-Agrawala-algorithm</h1>
 
 <pre>
+- Java based Document Distributed System
+-	Implemented Java Socket (TCP/IP) for Ricart-Agrawala-algorithm
+
+
 MakeJar.bat: compile the Server.java and Client.java
 RunJar.bat: run the Server.jar and Client.java
 
