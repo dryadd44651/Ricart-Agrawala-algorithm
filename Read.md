@@ -1,4 +1,6 @@
-compile the Server.java and Client.java
+MakeJar.bat: compile the Server.java and Client.java
+RunJar.bat: run the Server.jar and Client.java
+
 
 //for Client.jar
 javac -g Client.java
@@ -7,6 +9,7 @@ jar cfm Client.jar ClientMANIFEST.MF *.class
 javac -g Server.java
 jar cfm Server.jar ClientMANIFEST.MF *.class
 
+dc01~dc08 are 8 different machines
 Log in dc01~dc03(for Server.jar), dc04~08(for Client.jar).
 java -jar Server.jar 0 =>this mean run server 0 (dc01)
 java -jar Server.jar 1 =>this mean run server 1 (dc02)
