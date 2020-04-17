@@ -32,7 +32,7 @@ read 0.txt 5;
 write 1.txt 6;
 test 2.txt; (randomly test read/write 20 times)
 
-
+for more detail please check CS6378_Fall2019_Project1.pdf
 </pre>
 
 
