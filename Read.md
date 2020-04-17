@@ -1,3 +1,6 @@
+<h1>Distributed System based on Ricart-Agrawala-algorithm</h1>
+
+<pre>
 MakeJar.bat: compile the Server.java and Client.java
 RunJar.bat: run the Server.jar and Client.java
 
@@ -30,7 +33,7 @@ write 1.txt 6;
 test 2.txt; (randomly test read/write 20 times)
 
 
-
+</pre>
 
 
 
