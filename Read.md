@@ -32,7 +32,7 @@ read 0.txt 5;
 write 1.txt 6;
 test 2.txt; (randomly test read/write 20 times)
 
-for more detail please check <a href="https://github.com/dryadd44651/Ricart-Agrawala-algorithm/blob/master/CS6378_Fall2019_Project1_.pdf"> hCS6378_Fall2019_Project1.pdf</a>
+for more detail please check <a href="https://github.com/dryadd44651/Ricart-Agrawala-algorithm/blob/master/CS6378_Fall2019_Project1_.pdf"> CS6378_Fall2019_Project1_.pdf</a>
 
 
 </pre>
