@@ -20,7 +20,7 @@ javac -g Server.java
 jar cfm Server.jar ClientMANIFEST.MF *.class
 
 dc01-dc08 are 8 different machines
-Log in dc01~dc03(for Server.jar), dc04~08(for Client.jar).
+Log in dc01-dc03(for Server.jar), dc04-08(for Client.jar).
 java -jar Server.jar 0 =>this mean run server 0 (dc01)
 java -jar Server.jar 1 =>this mean run server 1 (dc02)
 java -jar Server.jar 2 =>this mean run server 1 (dc03)
